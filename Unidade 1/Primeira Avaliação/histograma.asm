@@ -436,8 +436,8 @@ imagem: .word 255 255 255 255 255 255 255 255 255 255 255 255
         .word 1 1 1 1 1 1 1 1 1 1 1 1
         .word 1 1 1 1 1 1 1 1 1 1 1 8
 
-xHist:  .word 0:4 # Eixo x do histograma de tamanho Lmax+1. E: .word x:y aloca y inteiros iniciados com valor x.
-Lmax:	.word 3 # Nível de cor máxima. A cor é representada como um valor de 0 até 255.
+H:  	.word 0:256 # Eixo x do histograma de tamanho Lmax+1. E: .word x:y aloca y inteiros iniciados com valor x.
+Lmax:	.word 255 # Nível de cor máxima. A cor é representada como um valor de 0 até 255.
 M:	.word 64 # Linhas da imagem
 N:	.word 81 # Colunas da imagem
 vir:	.asciiz ", " # Vírgula
@@ -445,13 +445,50 @@ tam:	.asciiz "tamanho: " # Não sei se vou usar isso
 
 	.text
 main:
+	
+	#jal imprime_vetor
+	jal processar
 	jal imprime_vetor
 	
 	li $v0, 10
 	syscall # FIM
+	
+processar:
+	# Procede com o algoritmo dado pelo professor para melhorar a distribuição de cores na imagem
+
+	la $s0, H # Iterador do vetor recebendo seu endereço base.
+	la $s1, imagem # Iterador da matriz recebendo seu endereço base.
+	lw $t0, Lmax # Tamanho do vetor.
+	lw $t1, M # Linhas da matriz.
+	lw $t2, N # Colunas da matriz.
+	subi $t8, $t1, 1 # M-1
+	subi $t9, $t2, 1 # N-1
+	# $t4 contém endereço após último valor na matriz.
+	# Se o iterador $s1 == $t4, o 'for' deve parar
+	# O cálculo é feito pela fórmula: addr = baseAddr + (rowIndex*colSize + colIndex)*dataSize
+	mul $t4, $t8, $t1 #  rowIndex*colSize
+	add $t4, $t4, $t9  # + colIndex
+	sll $t4, $t4, 2 #    *dataSize
+	add $t4, $t4, $s1 #  +baseAddr
+	
+	for:
+	#lição do dia: 'lw' (e possivelmente 'sw') só funciona para endereços múltiplos de 4
+		lw $t5, 0($s1) # $t5 = cor da imagem = f(x,y)
+		sll $t5, $t5, 2
+		add $t5, $t5, $s0  #$t5 = endereço do elemento no vetor H a ser incrementado. H[f(x,y)]
 		
+		lw $t3, ($t5) # Pega o valor que está em H[f(x,y)]
+		addi $t3, $t3, 1 # Soma em 1
+		sw $t3, ($t5) # Guarda valor incrementado em H[f(x,y)]
+		
+		addi $s1, $s1, 4 # Próximo elemento da matriz
+		blt $s1, $t4, for # if i < Lmax, próxima iteração
+		
+	jr $ra
+	
+
 imprime_vetor:
-	# Essa função imprime especificamente os elementos do vetor xHist
+	# Essa função imprime especificamente os elementos do vetor H
 	# de tamanho Lmax+1
 	addi $sp, $sp, -16
 	sw $t0, 0($sp) # Auxiliar usado na instrução SLT - set on less than
@@ -459,8 +496,9 @@ imprime_vetor:
 	sw $t2, 8($sp) # Tamanho do vetor, será usado para sair do loop
 	sw $ra, 12($sp)
 	# Não é preciso iniciar $t0
-	la $t1, xHist
-	lw $t2, Lmax # Até aqui $t2=5, mas temos que converter o ÍNDICE NO VETOR em ENDEREÇO NA MEMÓRIA
+	la $t1, H
+	lw $t2, Lmax # Até aqui $t2=um número, mas temos que converter o ÍNDICE NO VETOR em ENDEREÇO NA MEMÓRIA
+	addi $t2, $t2, 1
 	sll $t2, $t2, 2 # $t2 = 4*$t2
 	add $t2, $t2, $t1 # Agora $t2 representa o endereço na memória que contém o elemento 0 do vetor
 	
@@ -487,3 +525,13 @@ imprime_vetor:
 		addi $sp, $sp, 16
 		jr $ra
 		
+trash:
+# Cálculo do endereço na memória do elemento da matriz atual
+			#mult $a0, $t4, $t2 # addr = rowIndex*colSize
+			#add $a0, $a0, $t5 # 	  + colIndex
+			#sll $a0, $a0, 2 #	  *dataSize (4)
+			#add $a0, $a0, 
+			
+			#addi $t5, $t5, 4
+			#addi $t3 $t3, 1 # i=i+1
+			#beq $t3, $t0, fim_for1

@@ -34,9 +34,9 @@ somaDiagonal:
 		add $t1, $t1, $a0        #               + addrBase
 		
 		lw $t2, 0($t1)            # $t2 = matriz[i][i]
-		add $v0 $v0, $t2         # soma = soma + matriz[i][i]
+		add $v0, $v0, $t2         # soma = soma + matriz[i][i]
 		
 		addi $t0, $t0, 1         # contador do for
-		blt $t0, $a1, for        # if i > size, próxima iteração
+		blt $t0, $a1, for        # if i < size, próxima iteração
 	
 	jr $ra
