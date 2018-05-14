@@ -436,26 +436,24 @@ imagem: .word 255 255 255 255 255 255 255 255 255 255 255 255
         .word 1 1 1 1 1 1 1 1 1 1 1 1
         .word 1 1 1 1 1 1 1 1 1 1 1 8
 
-H:  	.word 0:256 # Eixo x do histograma de tamanho Lmax+1. E: .word x:y aloca y inteiros iniciados com valor x.
+H:  	.word 0:256 # Eixo x do histograma de tamanho Lmax+1. vetor: .word x:y aloca y inteiros iniciados com valor x.
 Lmax:	.word 255 # Nível de cor máxima. A cor é representada como um valor de 0 até 255.
 M:	.word 64 # Linhas da imagem
 N:	.word 81 # Colunas da imagem
 vir:	.asciiz ", " # Vírgula
-tam:	.asciiz "tamanho: " # Não sei se vou usar isso
 
 	.text
 main:
 	
 	#jal imprime_vetor
-	jal processar
+	jal criar_hist
 	jal imprime_vetor
 	
 	li $v0, 10
 	syscall # FIM
 	
-processar:
+criar_hist:
 	# Procede com o algoritmo dado pelo professor para melhorar a distribuição de cores na imagem
-
 	la $s0, H # Iterador do vetor recebendo seu endereço base.
 	la $s1, imagem # Iterador da matriz recebendo seu endereço base.
 	lw $t0, Lmax # Tamanho do vetor.
@@ -483,18 +481,12 @@ processar:
 		
 		addi $s1, $s1, 4 # Próximo elemento da matriz
 		blt $s1, $t4, for # if i < Lmax, próxima iteração
-		
 	jr $ra
 	
 
 imprime_vetor:
 	# Essa função imprime especificamente os elementos do vetor H
 	# de tamanho Lmax+1
-	addi $sp, $sp, -16
-	sw $t0, 0($sp) # Auxiliar usado na instrução SLT - set on less than
-	sw $t1, 4($sp) # Endereço do vetor
-	sw $t2, 8($sp) # Tamanho do vetor, será usado para sair do loop
-	sw $ra, 12($sp)
 	# Não é preciso iniciar $t0
 	la $t1, H
 	lw $t2, Lmax # Até aqui $t2=um número, mas temos que converter o ÍNDICE NO VETOR em ENDEREÇO NA MEMÓRIA
@@ -507,31 +499,16 @@ imprime_vetor:
 		lw $a0, 0($t1)
 		syscall
 		
+		addi $t1, $t1, 4 # Atualiza índice do vetor para o próximo elemento
+		slt $t0, $t1, $t2 # $t0 = $t1 < $t2
+		beq $t0, 0, fim_print # Se $t0 for falso, sai do loop
+		
 		li $v0, 4 # Imprimir String
 		la $a0, vir
 		syscall
 		
-		addi $t1, $t1, 4 # Atualiza índice do vetor para o próximo elemento
-		slt $t0, $t1, $t2 # $t0 = $t1 < $t2
-		beq $t0, 0, fim_print # Se $t0 for falso, sai do loop
 		j loop_print
 	
 	fim_print:
 		# Aqui termina a função
-		lw $t0, 0($sp)
-		lw $t1, 4($sp)
-		lw $t2, 8($sp)
-		lw $ra, 12($sp)
-		addi $sp, $sp, 16
 		jr $ra
-		
-trash:
-# Cálculo do endereço na memória do elemento da matriz atual
-			#mult $a0, $t4, $t2 # addr = rowIndex*colSize
-			#add $a0, $a0, $t5 # 	  + colIndex
-			#sll $a0, $a0, 2 #	  *dataSize (4)
-			#add $a0, $a0, 
-			
-			#addi $t5, $t5, 4
-			#addi $t3 $t3, 1 # i=i+1
-			#beq $t3, $t0, fim_for1
