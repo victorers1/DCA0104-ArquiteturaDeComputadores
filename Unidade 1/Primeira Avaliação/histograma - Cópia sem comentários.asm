@@ -436,87 +436,74 @@ imagem: .word 255 255 255 255 255 255 255 255 255 255 255 255
         .word 1 1 1 1 1 1 1 1 1 1 1 1
         .word 1 1 1 1 1 1 1 1 1 1 1 8
 
-H:  	.word 0:256 # Eixo x do histograma de tamanho Lmax+1. vetor: .word x:y aloca y inteiros iniciados com valor x.
-Lmax:	.word 255 # Nível de cor máxima. A cor é representada como um valor de 0 até 255.
-M:	.word 64 # Linhas da imagem
-N:	.word 81 # Colunas da imagem
-vir:	.asciiz ", " # Vírgula
+H:  	.word 0:256
+Lmax:	.word 255
+M:	.word 64
+N:	.word 81
 dp:	.asciiz ": "
 nl:	.asciiz "\n"
+esp:	.asciiz " "
 
 	.text
 main:
-	
-	#jal imprime_vetor
 	jal criar_hist
 	jal imprime_vetor
 	
 	li $v0, 10
-	syscall # FIM
+	syscall
 	
 criar_hist:
-	# Procede com o algoritmo dado pelo professor para melhorar a distribuição de cores na imagem
-	la $s0, H # Iterador do vetor recebendo seu endereço base.
-	la $s1, imagem # Iterador da matriz recebendo seu endereço base.
-	lw $t0, Lmax # Tamanho do vetor.
-	lw $t1, M # Linhas da matriz.
-	lw $t2, N # Colunas da matriz.
-	subi $t8, $t1, 1 # M-1
-	subi $t9, $t2, 1 # N-1
-	# $t4 contém endereço após último valor na matriz.
-	# Se o iterador $s1 == $t4, o 'for' deve parar
-	# O cálculo é feito pela fórmula: addr = baseAddr + (rowIndex*colSize + colIndex)*dataSize
-	mul $t4, $t8, $t1 #  rowIndex*colSize
-	add $t4, $t4, $t9  # + colIndex
-	sll $t4, $t4, 2 #    *dataSize
-	add $t4, $t4, $s1 #  +baseAddr
+	la $s0, H
+	la $s1, imagem
+	lw $t0, Lmax
+	lw $t1, M 
+	lw $t2, N 
+	subi $t8, $t1, 1
+	subi $t9, $t2, 1
+	
+	mul $t4, $t8, $t1
+	add $t4, $t4, $t9
+	sll $t4, $t4, 2 
+	add $t4, $t4, $s1
 	
 	for:
-	#lição do dia: 'lw' (e possivelmente 'sw') só funciona para endereços múltiplos de 4
-		lw $t5, 0($s1) # $t5 = cor da imagem = f(x,y)
+
+		lw $t5, 0($s1)
 		sll $t5, $t5, 2
-		add $t5, $t5, $s0  #$t5 = endereço do elemento no vetor H a ser incrementado. H[f(x,y)]
+		add $t5, $t5, $s0  
 		
-		lw $t3, ($t5) # Pega o valor que está em H[f(x,y)]
-		addi $t3, $t3, 1 # Soma em 1
-		sw $t3, ($t5) # Guarda valor incrementado em H[f(x,y)]
+		lw $t3, ($t5) 
+		addi $t3, $t3, 1
+		sw $t3, ($t5)
 		
-		addi $s1, $s1, 4 # Próximo elemento da matriz
-		blt $s1, $t4, for # if i < Lmax, próxima iteração
+		addi $s1, $s1, 4 
+		blt $s1, $t4, for 
 	jr $ra
 	
 
 imprime_vetor:
-	# Essa função imprime os elementos do vetor H, de tamanho Lmax+1
 	la $t1, H
-	lw $t2, Lmax # Até aqui $t2=um número, mas temos que converter o ÍNDICE NO VETOR em ENDEREÇO NA MEMÓRIA
-	move $t3, $zero # Contador
+	lw $t2, Lmax
+	move $t3, $zero
 	addi $t2, $t2, 1
-	sll $t2, $t2, 2 # $t2 = 4*$t2
-	add $t2, $t2, $t1 # Agora $t2 representa o endereço na memória que contém o elemento 0 do vetor
+	sll $t2, $t2, 2 
+	add $t2, $t2, $t1
 	
 	loop_print:
 		li $v0, 1
-		move $a0, $t3
-		syscall
-		li $v0, 4
-		la $a0, dp
-		syscall
-		li $v0, 1
 		lw $a0, 0($t1)
 		syscall
+
+		addi $t1, $t1, 4
+		slt $t0, $t1, $t2
+		beq $t0, 0, fim_print
 		
-		addi $t1, $t1, 4 # Atualiza índice do vetor para o próximo elemento
-		slt $t0, $t1, $t2 # $t0 = $t1 < $t2
-		beq $t0, 0, fim_print # Se $t0 for falso, sai do loop
-		
-		li $v0, 4 # Imprimir nova linha
-		la $a0, nl
+		li $v0, 4 
+		la $a0, esp
 		syscall
 		addi $t3, $t3, 1
 		
 		j loop_print
 	
 	fim_print:
-		# Aqui termina a função
 		jr $ra
